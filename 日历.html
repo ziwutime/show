@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日历</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f5f5f5;
+            padding: 20px;
+            color: #333;
+        }
+
+        .calendar-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+
+        /* 顶部导航栏 */
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .holiday-filter {
+            padding: 8px 16px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .date-navigator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-arrow {
+            width: 32px;
+            height: 32px;
+            border: 1px solid #ddd;
+            background: #fff;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: #666;
+        }
+
+        .nav-arrow:hover {
+            background: #f5f5f5;
+        }
+
+        .year-month {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        .year-selector, .month-selector {
+            border: none;
+            background: transparent;
+            font-size: 18px;
+            font-weight: 500;
+            cursor: pointer;
+            padding: 5px;
+        }
+
+        .today-btn {
+            padding: 8px 16px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .today-btn:hover {
+            background: #f5f5f5;
+        }
+
+        /* 星期头部 */
+        .weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+
+        .weekday {
+            text-align: center;
+            padding: 10px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .weekday.weekend {
+            color: #ff4444;
+        }
+
+        /* 日期网格 */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+        }
+
+        .date-cell {
+            position: relative;
+            min-height: 80px;
+            padding: 8px;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            background: #fff;
+            transition: all 0.2s;
+        }
+
+        .date-cell:hover {
+            background: #f9f9f9;
+        }
+
+        .date-cell.other-month {
+            color: #ccc;
+        }
+
+        .date-cell.weekend {
+            color: #ff4444;
+        }
+
+        .date-cell.selected {
+            background: #e3f2fd;
+            border: 2px solid #2196f3;
+            color: #2196f3;
+        }
+
+        .date-cell.weekend.selected {
+            color: #2196f3;
+        }
+
+        /* 选中状态的"休"日期，保持红色文字 */
+        .date-cell.selected:has(.holiday-badge.rest) .date-number {
+            color: #ff4444;
+        }
+
+        .date-cell.selected:has(.holiday-badge.rest) .lunar-date {
+            color: #ff4444;
+        }
+
+        .date-number {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .lunar-date {
+            font-size: 12px;
+            color: #666;
+            line-height: 1.4;
+        }
+
+        .date-cell.selected .lunar-date {
+            color: #2196f3;
+        }
+
+        .date-cell.other-month .lunar-date {
+            color: #ddd;
+        }
+
+        /* 节假日标签容器 */
+        .badge-container {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            display: flex;
+            gap: 3px;
+            flex-direction: row-reverse;
+        }
+
+        /* 节假日标签 */
+        .holiday-badge {
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 500;
+            color: white;
+            white-space: nowrap;
+        }
+
+        .holiday-badge.rest {
+            background: #ff4444;
+        }
+
+        .holiday-badge.work {
+            background: #2196f3;
+        }
+
+        .holiday-badge.leave {
+            background: #ff9800;
+        }
+
+        /* 只有"班"标记的日期格子样式（淡蓝色背景） */
+        .date-cell:has(.holiday-badge.work):not(:has(.holiday-badge.rest)):not(:has(.holiday-badge.leave)) {
+            background: #e3f2fd;
+            border: 1px solid #2196f3;
+        }
+
+        .date-cell:has(.holiday-badge.work):not(:has(.holiday-badge.rest)):not(:has(.holiday-badge.leave)) .date-number {
+            color: #2196f3;
+        }
+
+        .date-cell:has(.holiday-badge.work):not(:has(.holiday-badge.rest)):not(:has(.holiday-badge.leave)) .lunar-date {
+            color: #2196f3;
+        }
+
+        /* 有"休"标记的日期格子样式 */
+        .date-cell:has(.holiday-badge.rest) {
+            background: #ffd0d0;
+            border: 1px solid #ff4444;
+        }
+
+        .date-cell:has(.holiday-badge.rest) .date-number {
+            color: #ff4444;
+        }
+
+        .date-cell:has(.holiday-badge.rest) .lunar-date {
+            color: #ff4444;
+        }
+
+        /* 有"请假"标记的日期格子样式 */
+        .date-cell:has(.holiday-badge.leave) {
+            background: #ffd0d0;
+            border: 1px solid #ff4444;
+        }
+
+        .date-cell:has(.holiday-badge.leave) .date-number {
+            color: #ff4444;
+        }
+
+        .date-cell:has(.holiday-badge.leave) .lunar-date {
+            color: #ff4444;
+        }
+
+
+        /* 日期状态标签 */
+        .date-status-badge {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            font-weight: 600;
+            color: white;
+            white-space: nowrap;
+        }
+
+        .date-status-badge.past {
+            background: #999;
+        }
+
+        .date-status-badge.today {
+            background: #4caf50;
+        }
+
+        /* 底部详细信息 */
+        .date-details {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .lunar-info {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .yi-ji-container {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+        }
+
+        .yi-ji-item {
+            flex: 1;
+        }
+
+        .yi-ji-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .yi-icon {
+            width: 16px;
+            height: 16px;
+            background: #ff4444;
+            border-radius: 2px;
+        }
+
+        .ji-icon {
+            width: 16px;
+            height: 16px;
+            background: #999;
+            border-radius: 50%;
+        }
+
+        .yi-ji-content {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .countdown {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: #666;
+            margin-top: 10px;
+        }
+
+        .clock-icon {
+            width: 16px;
+            height: 16px;
+            background: #999;
+            border-radius: 50%;
+            position: relative;
+        }
+
+        .clock-icon::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 2px;
+            height: 6px;
+            background: white;
+        }
+
+        .clock-icon::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(45deg);
+            width: 2px;
+            height: 4px;
+            background: white;
+        }
+
+        /* ========== 日期状态样式（最高优先级，必须放在最后） ========== */
+        
+        /* 过去的日期样式 - 优先级最高，覆盖所有其他样式 */
+        .date-cell.past-date {
+            opacity: 0.5 !important;
+            background: #f5f5f5 !important;
+            border: 1px solid #ddd !important;
+        }
+
+        .date-cell.past-date .date-number,
+        .date-cell.past-date .lunar-date {
+            color: #999 !important;
+        }
+
+        /* 过去的日期即使有请假、班、休标记也保持灰色 */
+        .date-cell.past-date:has(.holiday-badge.rest),
+        .date-cell.past-date:has(.holiday-badge.work),
+        .date-cell.past-date:has(.holiday-badge.leave) {
+            opacity: 0.5 !important;
+            background: #f5f5f5 !important;
+            border: 1px solid #ddd !important;
+        }
+
+        .date-cell.past-date:has(.holiday-badge.rest) .date-number,
+        .date-cell.past-date:has(.holiday-badge.rest) .lunar-date,
+        .date-cell.past-date:has(.holiday-badge.work) .date-number,
+        .date-cell.past-date:has(.holiday-badge.work) .lunar-date,
+        .date-cell.past-date:has(.holiday-badge.leave) .date-number,
+        .date-cell.past-date:has(.holiday-badge.leave) .lunar-date {
+            color: #999 !important;
+        }
+
+        /* 今天的日期样式 - 优先级最高，覆盖所有其他样式 */
+        .date-cell.today-date {
+            background: #e8f5e9 !important;
+            border: 2px solid #4caf50 !important;
+            box-shadow: 0 0 0 1px rgba(76, 175, 80, 0.2);
+        }
+
+        .date-cell.today-date .date-number {
+            color: #2e7d32 !important;
+            font-weight: 700;
+        }
+
+        .date-cell.today-date .lunar-date {
+            color: #2e7d32 !important;
+        }
+
+        /* 今天的日期即使是周末也保持绿色主题 */
+        .date-cell.today-date.weekend .date-number,
+        .date-cell.today-date.weekend .lunar-date {
+            color: #2e7d32 !important;
+        }
+
+        /* 今天的日期即使有请假、班、休标记也保持绿色主题 */
+        .date-cell.today-date:has(.holiday-badge.rest),
+        .date-cell.today-date:has(.holiday-badge.work),
+        .date-cell.today-date:has(.holiday-badge.leave) {
+            background: #e8f5e9 !important;
+            border: 2px solid #4caf50 !important;
+            box-shadow: 0 0 0 1px rgba(76, 175, 80, 0.2);
+        }
+
+        .date-cell.today-date:has(.holiday-badge.rest) .date-number,
+        .date-cell.today-date:has(.holiday-badge.rest) .lunar-date,
+        .date-cell.today-date:has(.holiday-badge.work) .date-number,
+        .date-cell.today-date:has(.holiday-badge.work) .lunar-date,
+        .date-cell.today-date:has(.holiday-badge.leave) .date-number,
+        .date-cell.today-date:has(.holiday-badge.leave) .lunar-date {
+            color: #2e7d32 !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="calendar-container">
+        <!-- 星期头部 -->
+        <div class="weekdays">
+            <div class="weekday">一</div>
+            <div class="weekday">二</div>
+            <div class="weekday">三</div>
+            <div class="weekday">四</div>
+            <div class="weekday">五</div>
+            <div class="weekday weekend">六</div>
+            <div class="weekday weekend">日</div>
+        </div>
+
+        <!-- 日期网格 -->
+        <div class="calendar-grid" id="calendarGrid"></div>
+
+        <!-- 底部详细信息 -->
+        <div class="date-details" id="dateDetails">
+            <div class="lunar-info" id="lunarInfo">正月初十 丙午年马</div>
+            <div class="yi-ji-container">
+                <div class="yi-ji-item">
+                    <div class="yi-ji-label">
+                        <div class="yi-icon"></div>
+                        <span>宜</span>
+                    </div>
+                    <div class="yi-ji-content" id="yiContent">结婚.出行.搬家.合婚订婚.动土.祈福.安葬祭祀.修造.破土</div>
+                </div>
+                <div class="yi-ji-item">
+                    <div class="yi-ji-label">
+                        <div class="ji-icon"></div>
+                        <span>忌</span>
+                    </div>
+                    <div class="yi-ji-content" id="jiContent">搬新房.开业.斋醮</div>
+                </div>
+            </div>
+            <div class="countdown" id="countdown">
+                <div class="clock-icon"></div>
+                <span id="countdownText">距离2026年2月26日 还有35天</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 农历数据（简化版，实际应该使用完整的农历库）
+        const lunarMonths = ['正', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二'];
+        const lunarDays = ['初一', '初二', '初三', '初四', '初五', '初六', '初七', '初八', '初九', '初十',
+            '十一', '十二', '十三', '十四', '十五', '十六', '十七', '十八', '十九', '二十',
+            '廿一', '廿二', '廿三', '廿四', '廿五', '廿六', '廿七', '廿八', '廿九', '三十'];
+
+        // 节假日和节气数据（2026年2月）
+        const holidays = {
+            '2026-02-02': { name: '湿地日', type: 'holiday' },
+            '2026-02-04': { name: '立春', type: 'solar' },
+            '2026-02-10': { name: '北小年', type: 'holiday' },
+            '2026-02-11': { name: '南小年', type: 'holiday' },
+            '2026-02-13': { name: '', leave: true },
+            '2026-02-14': { name: '情人节', type: 'holiday', work: true, leave: true },
+            '2026-02-15': { name: '', rest: true },
+            '2026-02-16': { name: '除夕', type: 'holiday', rest: true },
+            '2026-02-17': { name: '春节', type: 'holiday', rest: true },
+            '2026-02-18': { name: '雨水', type: 'solar', rest: true },
+            '2026-02-19': { name: '', rest: true },
+            '2026-02-20': { name: '', rest: true },
+            '2026-02-21': { name: '', rest: true },
+            '2026-02-22': { name: '', rest: true },
+            '2026-02-23': { name: '', rest: true },
+            '2026-02-24': { name: '', leave: true },
+            '2026-02-28': { name: '', work: true },
+            '2026-03-03': { name: '元宵节', type: 'holiday' },
+            '2026-03-05': { name: '惊蛰', type: 'solar' },
+            '2026-03-07': { name: '女生节', type: 'holiday' },
+            '2026-03-08': { name: '妇女节', type: 'holiday' }
+        };
+
+        // 宜忌数据（简化版）
+        const yiJiData = {
+            '2026-02-26': {
+                lunar: '正月初十 丙午年马',
+                yi: '结婚.出行.搬家.合婚订婚.动土.祈福.安葬祭祀.修造.破土',
+                ji: '搬新房.开业.斋醮'
+            }
+        };
+
+        let currentDate = new Date(2026, 1, 26); // 2026年2月26日
+        let selectedDate = new Date(2026, 1, 26);
+
+        // 获取今天的日期
+        function getToday() {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            return today;
+        }
+
+        // 获取农历日期（简化版）
+        function getLunarDate(date) {
+            // 这里应该使用完整的农历转换库
+            // 简化处理：根据日期返回模拟的农历
+            const day = date.getDate();
+            const month = date.getMonth() + 1;
+            
+            // 2026年1月的农历数据（根据实际数据）
+            if (date.getFullYear() === 2026 && month === 1) {
+                const lunarMap = {
+                    26: '五九天',
+                    27: '初九',
+                    28: '初十',
+                    29: '十一',
+                    30: '十二',
+                    31: '十三'
+                };
+                return lunarMap[day] || '';
+            }
+            
+            // 2026年2月的农历数据（根据实际数据）
+            if (date.getFullYear() === 2026 && month === 2) {
+                const lunarMap = {
+                    1: '十四',
+                    2: '湿地日', // 显示节日名称
+                    3: '十六',
+                    4: '立春', // 显示节气名称
+                    5: '十八',
+                    6: '十九',
+                    7: '二十',
+                    8: '廿一',
+                    9: '廿二',
+                    10: '北小年', // 显示节日名称
+                    11: '南小年', // 显示节日名称
+                    12: '廿五',
+                    13: '七九天',
+                    14: '情人节', // 显示节日名称
+                    15: '廿八',
+                    16: '除夕', // 显示节日名称
+                    17: '春节', // 显示节日名称
+                    18: '雨水', // 显示节气名称
+                    19: '初三',
+                    20: '初四',
+                    21: '初五',
+                    22: '初六',
+                    23: '初七',
+                    24: '初八',
+                    25: '初九',
+                    26: '初十',
+                    27: '十一',
+                    28: '十二'
+                };
+                return lunarMap[day] || '';
+            }
+            
+            // 2026年3月的农历数据（根据实际数据）
+            if (date.getFullYear() === 2026 && month === 3) {
+                const lunarMap = {
+                    1: '十三',
+                    2: '十四',
+                    3: '元宵节', // 显示节日名称
+                    4: '十六',
+                    5: '惊蛰', // 显示节气名称
+                    6: '十八',
+                    7: '女生节', // 显示节日名称
+                    8: '妇女节' // 显示节日名称
+                };
+                return lunarMap[day] || '';
+            }
+            
+            // 默认返回
+            const lunarDay = (day % 30) || 30;
+            return lunarDays[lunarDay - 1];
+        }
+
+        // 格式化日期为 YYYY-MM-DD
+        function formatDate(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // 渲染日历
+        function renderCalendar() {
+            const grid = document.getElementById('calendarGrid');
+            grid.innerHTML = '';
+
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            
+            // 获取当前日期（今天）- 使用模拟日期或实际日期
+            const today = getToday();
+            
+            // 获取当月第一天和最后一天
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            
+            // 获取第一天是星期几（0=周日，需要转换为1=周一）
+            let startDay = firstDay.getDay();
+            startDay = startDay === 0 ? 7 : startDay; // 转换为周一到周日（1-7）
+            
+            // 计算需要显示的开始日期（可能包含上月的最后几天）
+            const startDate = new Date(firstDay);
+            startDate.setDate(startDate.getDate() - (startDay - 1));
+            
+            // 渲染42天（6周）
+            for (let i = 0; i < 42; i++) {
+                const date = new Date(startDate);
+                date.setDate(startDate.getDate() + i);
+                date.setHours(0, 0, 0, 0);
+                
+                const dateStr = formatDate(date);
+                const isCurrentMonth = date.getMonth() === month;
+                const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+                
+                // 判断日期状态：过去、今天、未来
+                const isPast = date < today;
+                const isToday = date.getTime() === today.getTime();
+                
+                const cell = document.createElement('div');
+                cell.className = 'date-cell';
+                if (!isCurrentMonth) cell.classList.add('other-month');
+                if (isWeekend) cell.classList.add('weekend');
+                if (isPast) cell.classList.add('past-date');
+                if (isToday) cell.classList.add('today-date');
+                
+                // 日期数字
+                const dateNumber = document.createElement('div');
+                dateNumber.className = 'date-number';
+                dateNumber.textContent = date.getDate();
+                cell.appendChild(dateNumber);
+                
+                // 农历日期或节假日
+                const lunarDiv = document.createElement('div');
+                lunarDiv.className = 'lunar-date';
+                const holiday = holidays[dateStr];
+                if (holiday && holiday.name) {
+                    lunarDiv.textContent = holiday.name;
+                } else {
+                    lunarDiv.textContent = getLunarDate(date);
+                }
+                cell.appendChild(lunarDiv);
+                
+                // 日期状态标签（过去或今天）
+                if (isPast) {
+                    const statusBadge = document.createElement('div');
+                    statusBadge.className = 'date-status-badge past';
+                    statusBadge.textContent = '已过';
+                    cell.appendChild(statusBadge);
+                } else if (isToday) {
+                    const statusBadge = document.createElement('div');
+                    statusBadge.className = 'date-status-badge today';
+                    statusBadge.textContent = '今天';
+                    cell.appendChild(statusBadge);
+                }
+                
+                // 节假日标签
+                if (holiday) {
+                    const badgeContainer = document.createElement('div');
+                    badgeContainer.className = 'badge-container';
+                    
+                    if (holiday.rest) {
+                        const badge = document.createElement('div');
+                        badge.className = 'holiday-badge rest';
+                        badge.textContent = '休';
+                        badgeContainer.appendChild(badge);
+                    }
+                    if (holiday.work) {
+                        const badge = document.createElement('div');
+                        badge.className = 'holiday-badge work';
+                        badge.textContent = '班';
+                        badgeContainer.appendChild(badge);
+                    }
+                    if (holiday.leave) {
+                        const badge = document.createElement('div');
+                        badge.className = 'holiday-badge leave';
+                        badge.textContent = '请假';
+                        badgeContainer.appendChild(badge);
+                    }
+                    
+                    if (badgeContainer.children.length > 0) {
+                        cell.appendChild(badgeContainer);
+                    }
+                }
+                
+                grid.appendChild(cell);
+            }
+        }
+
+        // 更新日期详细信息
+        function updateDateDetails() {
+            const dateStr = formatDate(selectedDate);
+            const data = yiJiData[dateStr] || {
+                lunar: getLunarDate(selectedDate) + ' 丙午年马',
+                yi: '暂无数据',
+                ji: '暂无数据'
+            };
+            
+            document.getElementById('lunarInfo').textContent = data.lunar;
+            document.getElementById('yiContent').textContent = data.yi;
+            document.getElementById('jiContent').textContent = data.ji;
+            
+            // 计算倒计时
+            const today = getToday();
+            const target = new Date(selectedDate);
+            target.setHours(0, 0, 0, 0);
+            const diff = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
+            
+            if (diff === 0) {
+                document.getElementById('countdownText').textContent = '今天';
+            } else if (diff > 0) {
+                document.getElementById('countdownText').textContent = `距离${selectedDate.getFullYear()}年${selectedDate.getMonth() + 1}月${selectedDate.getDate()}日 还有${diff}天`;
+            } else {
+                document.getElementById('countdownText').textContent = `${selectedDate.getFullYear()}年${selectedDate.getMonth() + 1}月${selectedDate.getDate()}日 已过去${Math.abs(diff)}天`;
+            }
+        }
+
+        // 初始化
+        function init() {
+            renderCalendar();
+            updateDateDetails();
+        }
+
+        // 页面加载完成后初始化
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
