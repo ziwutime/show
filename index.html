@@ -468,31 +468,6 @@
 
         <!-- 日期网格 -->
         <div class="calendar-grid" id="calendarGrid"></div>
-
-        <!-- 底部详细信息 -->
-        <div class="date-details" id="dateDetails">
-            <div class="lunar-info" id="lunarInfo">正月初十 丙午年马</div>
-            <div class="yi-ji-container">
-                <div class="yi-ji-item">
-                    <div class="yi-ji-label">
-                        <div class="yi-icon"></div>
-                        <span>宜</span>
-                    </div>
-                    <div class="yi-ji-content" id="yiContent">结婚.出行.搬家.合婚订婚.动土.祈福.安葬祭祀.修造.破土</div>
-                </div>
-                <div class="yi-ji-item">
-                    <div class="yi-ji-label">
-                        <div class="ji-icon"></div>
-                        <span>忌</span>
-                    </div>
-                    <div class="yi-ji-content" id="jiContent">搬新房.开业.斋醮</div>
-                </div>
-            </div>
-            <div class="countdown" id="countdown">
-                <div class="clock-icon"></div>
-                <span id="countdownText">距离2026年2月26日 还有35天</span>
-            </div>
-        </div>
     </div>
 
     <script>
@@ -736,42 +711,18 @@
             }
         }
 
-        // 更新日期详细信息
-        function updateDateDetails() {
-            const dateStr = formatDate(selectedDate);
-            const data = yiJiData[dateStr] || {
-                lunar: getLunarDate(selectedDate) + ' 丙午年马',
-                yi: '暂无数据',
-                ji: '暂无数据'
-            };
-            
-            document.getElementById('lunarInfo').textContent = data.lunar;
-            document.getElementById('yiContent').textContent = data.yi;
-            document.getElementById('jiContent').textContent = data.ji;
-            
-            // 计算倒计时
-            const today = getToday();
-            const target = new Date(selectedDate);
-            target.setHours(0, 0, 0, 0);
-            const diff = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
-            
-            if (diff === 0) {
-                document.getElementById('countdownText').textContent = '今天';
-            } else if (diff > 0) {
-                document.getElementById('countdownText').textContent = `距离${selectedDate.getFullYear()}年${selectedDate.getMonth() + 1}月${selectedDate.getDate()}日 还有${diff}天`;
-            } else {
-                document.getElementById('countdownText').textContent = `${selectedDate.getFullYear()}年${selectedDate.getMonth() + 1}月${selectedDate.getDate()}日 已过去${Math.abs(diff)}天`;
-            }
-        }
-
         // 初始化
         function init() {
             renderCalendar();
-            updateDateDetails();
         }
 
         // 页面加载完成后初始化
         window.addEventListener('DOMContentLoaded', init);
     </script>
+    <div style="text-align: center; margin-top: 30px; padding: 20px;">
+        <a href="tetris.html" style="display: inline-block; padding: 12px 24px; background: #667eea; color: white; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 500; transition: all 0.3s;">
+            玩俄罗斯方块游戏
+        </a>
+    </div>
 </body>
 </html>
